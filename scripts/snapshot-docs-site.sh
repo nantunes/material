@@ -30,6 +30,15 @@ function run {
   echo "-- Pushing snapshot..."
   git push -q origin master
 
+  # See https://johnheroy.com/2014/10/17/continuous-firebase-deployment-with-travis.html
+  echo "-- Deploying to firebase"
+  # Only make tmp dir if running on travis-ci
+  if [ -d /home/travis ]; then
+    mkdir -p /home/travis/tmp
+  fi
+  sudo $(which npm) install -g firebase-tools
+  echo -e "${FIREBASE_EMAIL}\n${FIREBASE_PASSWORD}" | firebase deploy
+
   cd ../
 
   echo "-- Cleanup..."
