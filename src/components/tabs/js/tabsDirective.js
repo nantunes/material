@@ -95,7 +95,7 @@ function MdTabs ($mdTheming, $mdUtil, $compile) {
       stretchTabs:   '@?mdStretchTabs'
     },
     template: function (element, attr) {
-      var content = attr["$mdTabsTemplate"] = element.html();
+      attr["$mdTabsTemplate"] = element.html();
       return '\
         <md-tabs-wrapper ng-class="{ \'md-stretch-tabs\': $mdTabsCtrl.shouldStretchTabs() }">\
           <md-tab-data></md-tab-data>\
@@ -181,6 +181,7 @@ function MdTabs ($mdTheming, $mdUtil, $compile) {
               ng-repeat="(index, tab) in $mdTabsCtrl.tabs" \
               md-template="tab.template"\
               md-scope="tab.parent"\
+              md-connected-if="tab.isActive()"\
               ng-class="{\
                 \'md-no-transition\': $mdTabsCtrl.lastSelectedIndex == null,\
                 \'md-active\':        tab.isActive(),\

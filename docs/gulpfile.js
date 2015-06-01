@@ -1,3 +1,4 @@
+var gulp = require('gulp');
 var Dgeni = require('dgeni');
 var _ = require('lodash');
 var concat = require('gulp-concat');
@@ -19,11 +20,6 @@ var connect = require('gulp-connect');
 var config = {
   demoFolder: 'demo-partials'
 };
-
-gulp.task('docs', ['docs-js', 'docs-css', 'docs-demo-scripts'], function () {
-  gulp.src('.')
-      .pipe(connect.reload());
-});
 
 gulp.task('demos', function() {
   var demos = [];

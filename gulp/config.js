@@ -1,3 +1,6 @@
+var args = require('minimist')(process.argv.slice(2));
+var VERSION = args.version || require('../package.json').version;
+
 module.exports = {
   banner:
   '/*!\n' +
@@ -32,5 +35,8 @@ module.exports = {
     'src/core/style/layout.scss'
   ],
   paths: 'src/{components,services}/**',
-  outputDir: 'dist/'
+  outputDir: 'dist/',
+  demoFolder: 'demo-partials'
 };
+
+

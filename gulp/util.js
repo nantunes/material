@@ -1,9 +1,38 @@
+var config = require('./config');
+var gulp = require('gulp');
+var gutil = require('gulp-util');
+var frep = require('gulp-frep');
+var fs = require('fs');
+var args = require('minimist')(process.argv.slice(2));
+var path = require('path');
+var rename = require('gulp-rename');
+var filter = require('gulp-filter');
+var concat = require('gulp-concat');
+var autoprefixer = require('gulp-autoprefixer');
+var series = require('stream-series');
+var lazypipe = require('lazypipe');
+var glob = require('glob').sync;
+var uglify = require('gulp-uglify');
+var sass = require('gulp-sass');
+var plumber = require('gulp-plumber');
+var ngAnnotate = require('gulp-ng-annotate');
+var minifyCss = require('gulp-minify-css');
+var insert = require('gulp-insert');
+var gulpif = require('gulp-if');
+var constants = require('./const');
+var VERSION = constants.VERSION;
+var BUILD_MODE = constants.BUILD_MODE;
+var IS_DEV = constants.IS_DEV;
+var ROOT = constants.ROOT;
+var utils = require('../scripts/gulp-utils.js');
+
 exports.buildJs = buildJs;
 exports.autoprefix = autoprefix;
 exports.buildModule = buildModule;
 exports.filterNonCodeFiles = filterNonCodeFiles;
 exports.readModuleArg = readModuleArg;
 exports.themeBuildStream = themeBuildStream;
+exports.args = args;
 
 /**
  * Builds the entire component library javascript.
@@ -54,14 +83,26 @@ function buildModule(module, isRelease) {
   var name = module.split('.').pop();
   utils.copyDemoAssets(name, 'src/components/', 'dist/demos/');
 
-  return utils.filesForModule(module)
+  var stream = utils.filesForModule(module)
       .pipe(filterNonCodeFiles())
       .pipe(gulpif('*.scss', buildModuleStyles(name)))
-      .pipe(gulpif('*.js', buildModuleJs(name)))
+      .pipe(gulpif('*.js', buildModuleJs(name)));
+  if (module === 'material.core') {
+    stream = splitStream(stream);
+  }
+  return stream
       .pipe(BUILD_MODE.transform())
       .pipe(insert.prepend(config.banner))
       .pipe(gulpif(isRelease, buildMin()))
       .pipe(gulp.dest(BUILD_MODE.outputDir + name));
+
+  function splitStream (stream) {
+    var js = series(stream, themeBuildStream())
+        .pipe(filter('*.js'))
+        .pipe(concat('core.js'));
+    var css = stream.pipe(filter('*.css'));
+    return series(js, css);
+  }
 
   function buildMin() {
     return lazypipe()
@@ -83,9 +124,16 @@ function buildModule(module, isRelease) {
   }
 
   function buildModuleJs(name) {
+    var patterns = [
+      {
+        pattern: /\@ngInject/g,
+        replacement: 'ngInject'
+      }
+    ];
     return lazypipe()
         .pipe(plumber)
         .pipe(ngAnnotate)
+        .pipe(frep, patterns)
         .pipe(concat, name + '.js')
     ();
   }
@@ -93,7 +141,7 @@ function buildModule(module, isRelease) {
   function buildModuleStyles(name) {
     var files = [];
     config.themeBaseFiles.forEach(function(fileGlob) {
-      files = files.concat(glob(fileGlob, { cwd: root }));
+      files = files.concat(glob(fileGlob, { cwd: ROOT }));
     });
     var baseStyles = files.map(function(fileName) {
       return fs.readFileSync(fileName, 'utf8').toString();
@@ -112,7 +160,7 @@ function buildModule(module, isRelease) {
 }
 
 function readModuleArg() {
-  var module = argv.c ? 'material.components.' + argv.c : (argv.module || argv.m);
+  var module = args.c ? 'material.components.' + args.c : (args.module || args.m);
   if (!module) {
     gutil.log('\nProvide a compnent argument via `-c`:',
         '\nExample: -c toast');
@@ -137,4 +185,3 @@ function themeBuildStream() {
       .pipe(sass())
       .pipe(utils.cssToNgConstant('material.core', '$MD_THEME_CSS'));
 }
-
