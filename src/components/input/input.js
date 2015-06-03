@@ -379,7 +379,7 @@ function placeholderDirective($log) {
 
   function postLink(scope, element, attr, inputContainer) {
     if (!inputContainer) return;
-    if (blackListElements.indexOf(element[0].nodeName) != -1) return;
+    //if (blackListElements.indexOf(element[0].nodeName) != -1) return;
     if (angular.isDefined(inputContainer.element.attr('md-no-float'))) return;
 
     var placeholderText = attr.placeholder;

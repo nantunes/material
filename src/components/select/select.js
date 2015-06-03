@@ -68,7 +68,7 @@ angular.module('material.components.select', [
 function SelectDirective($mdSelect, $mdUtil, $mdTheming, $mdAria, $interpolate, $compile, $parse) {
   return {
     restrict: 'E',
-    require: ['mdSelect', 'ngModel', '?^form'],
+    require: ['^?mdInputContainer', 'mdSelect', 'ngModel', '?^form'],
     compile: compile,
     controller: function() { } // empty placeholder controller to be initialized in link
   };
@@ -143,9 +143,22 @@ function SelectDirective($mdSelect, $mdUtil, $mdTheming, $mdAria, $interpolate, 
       var isOpen;
       var isDisabled;
 
-      var mdSelectCtrl = ctrls[0];
-      var ngModel = ctrls[1];
-      var formCtrl = ctrls[2];
+      var containerCtrl = ctrls[0];
+      var mdSelectCtrl = ctrls[1];
+      var ngModel = ctrls[2] || $mdUtil.fakeNgModel();
+      var formCtrl = ctrls[3];
+
+      var isReadonly = angular.isDefined(attr.readonly);
+
+      if ( !containerCtrl ) return;
+      if (containerCtrl.input) {
+        throw new Error("<md-input-container> can only have *one* child element!");
+      }
+      containerCtrl.input = element;
+
+      if(!containerCtrl.label) {
+        $mdAria.expect(element, 'aria-label', element.attr('placeholder'));
+      }
 
       var labelEl = element.find('md-select-label');
       var customLabel = labelEl.text().length !== 0;
@@ -153,6 +166,11 @@ function SelectDirective($mdSelect, $mdUtil, $mdTheming, $mdAria, $interpolate, 
       createSelect();
 
       $mdTheming(element);
+
+      var isErrorGetter = containerCtrl.isErrorGetter || function() {
+        return ngModel.$invalid && ngModel.$touched;
+      };
+      scope.$watch(isErrorGetter, containerCtrl.setInvalid);
 
       if (attr.name && formCtrl) {
         var selectEl = element.parent()[0].querySelector('select[name=".' + attr.name + '"]')
@@ -174,7 +192,8 @@ function SelectDirective($mdSelect, $mdUtil, $mdTheming, $mdAria, $interpolate, 
       };
 
       mdSelectCtrl.setIsPlaceholder = function(val) {
-        val ? labelEl.addClass('md-placeholder') : labelEl.removeClass('md-placeholder');
+        var target = customLabel ? labelEl : labelEl.children().eq(0);
+        val ? target.addClass('md-select-placeholder') : target.removeClass('md-select-placeholder');
       };
 
       scope.$$postDigest(function() {
@@ -255,6 +274,22 @@ function SelectDirective($mdSelect, $mdUtil, $mdTheming, $mdAria, $interpolate, 
       }
       element.attr(ariaAttrs);
 
+      ngModel.$parsers.push(ngModelPipelineCheckValue);
+      ngModel.$formatters.push(ngModelPipelineCheckValue);
+
+      element.on('input', inputCheckValue);
+
+      if (!isReadonly) {
+        element
+          .on('focus', function(ev) {
+            containerCtrl.setFocused(true);
+          })
+          .on('blur', function(ev) {
+            containerCtrl.setFocused(false);
+            inputCheckValue();
+          });
+      }
+
       scope.$on('$destroy', function() {
         if (isOpen) {
           $mdSelect.cancel().then(function() {
@@ -263,8 +298,24 @@ function SelectDirective($mdSelect, $mdUtil, $mdTheming, $mdAria, $interpolate, 
         } else {
           selectContainer.remove();
         }
+
+        containerCtrl.setFocused(false);
+        containerCtrl.setHasValue(false);
+        containerCtrl.input = null;
       });
 
+      /**
+       *
+       */
+      function ngModelPipelineCheckValue(arg) {
+        containerCtrl.setHasValue(!ngModel.$isEmpty(arg));
+        return arg;
+      }
+      function inputCheckValue() {
+        // An input's value counts if its length > 0,
+        // or if the input's validity state says it has bad input (eg string in a number input)
+        containerCtrl.setHasValue(selectMenuCtrl.selectedLabels().length > 0 || (element[0].validity||{}).badInput);
+      }
 
       // Create a fake select to find out the label value
       function createSelect() {
