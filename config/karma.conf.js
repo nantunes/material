@@ -14,15 +14,17 @@ module.exports = function(config) {
     // demos in the tests, and Karma doesn't support advanced
     // globbing.
 
+    'dist/angular-material.css',
+
     'src/core/**/*.js',
     'src/components/*/*.js',
     'src/components/*/js/*.js',
 
     'src/**/*.spec.js'
-
   ];
 
   var COMPILED_SRC = [
+    'dist/angular-material.min.css',
     'dist/angular-material.min.js',   // Minified source
     'src/**/*.spec.js'
   ];
@@ -45,7 +47,7 @@ module.exports = function(config) {
     frameworks: ['jasmine'],
     files: dependencies.concat(testSrc),
 
-    logLevel: config.LOG_WARN,
+    logLevel: config.LOG_DEBUG,
     port: 9876,
     reporters: ['progress'],
     colors: true,
@@ -63,7 +65,7 @@ module.exports = function(config) {
     // - Safari (only Mac; has to be installed with `npm install karma-safari-launcher`)
     // - PhantomJS
     // - IE (only Windows; has to be installed with `npm install karma-ie-launcher`)
-    browsers: ['Chrome'],
+    browsers: ['PhantomJS'],
 
     // you can define custom flags
     customLaunchers: {
